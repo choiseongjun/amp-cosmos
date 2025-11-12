@@ -1,10 +1,14 @@
 syntax = "proto3";
 package amp.points.module.v1;
 
+import "cosmos/app/v1alpha1/module.proto";
+
 option go_package = "amp/x/points/types";
 
 // Module config for depinject wiring.
 message Module {
+  option (cosmos.app.v1alpha1.module) = {go_import: "amp/x/points"};
+
   // Optional custom authority (module name or address). Defaults to gov module account.
   string authority = 1;
 }

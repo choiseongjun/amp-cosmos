@@ -1,10 +1,11 @@
 package cmd
 
 import (
-	"os"
 	"fmt"
+	"os"
 
 	"cosmossdk.io/client/v2/autocli"
+	"cosmossdk.io/core/appmodule"
 	"cosmossdk.io/depinject"
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -74,6 +75,13 @@ func NewRootCmd() *cobra.Command {
 
 			return server.InterceptConfigsPreRunHandler(cmd, customAppTemplate, customAppConfig, customCMTConfig)
 		},
+	}
+
+	if moduleBasicManager == nil {
+		moduleBasicManager = make(module.BasicManager)
+	}
+	if autoCliOpts.Modules == nil {
+		autoCliOpts.Modules = make(map[string]appmodule.AppModule)
 	}
 
 	// Since the IBC modules don't support dependency injection, we need to
