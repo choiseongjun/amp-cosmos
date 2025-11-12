@@ -5,9 +5,10 @@ import { DEFAULT_FAUCET_CREDIT_PATH, DEFAULT_FAUCET_URL, DEFAULT_REST_URL, DEFAU
 import { getBalances, getNodeInfo, type Coin } from "@/lib/cosmos";
 import { getListings, statusToLabel, type Listing } from "@/lib/amp";
 import { useLocalStorage } from "@/lib/useLocalStorage";
-import { buildMsgBuyItem, buildMsgListItem, getSigningClient, type ChainConfig } from "@/lib/wallet";
+import { buildMsgBuyItem, buildMsgListItem, buildMsgRecordActivity, getSigningClient, type ChainConfig } from "@/lib/wallet";
 import { getBlockMetas, getLatestHeight, subscribeNewBlocks, type BlockHeader } from "@/lib/tmws";
 import { getBlockTxEvents, type TxEvent } from "@/lib/tx";
+import { getScore } from "@/lib/points";
 
 type Actor = "alice" | "bob";
 
@@ -42,6 +43,8 @@ export default function Home() {
   const [histCount, setHistCount] = useState(200);
   const [histBlocks, setHistBlocks] = useState<BlockHeader[]>([]);
   const [loadingHist, setLoadingHist] = useState(false);
+  const [pointsActive, setPointsActive] = useState<number>(0);
+  const [pointsWallet, setPointsWallet] = useState<number>(0);
 
   // sell form state
   const [sellTitle, setSellTitle] = useState("");
@@ -77,6 +80,24 @@ export default function Home() {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restUrl, activeAddress]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = activeAddress ? await getScore(restUrl, activeAddress) : 0;
+        setPointsActive(Number(s || 0));
+      } catch {}
+    })();
+  }, [restUrl, activeAddress]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = walletAddress ? await getScore(restUrl, walletAddress) : 0;
+        setPointsWallet(Number(s || 0));
+      } catch {}
+    })();
+  }, [restUrl, walletAddress]);
 
   useEffect(() => {
     // preset owned lookup to active address if empty
@@ -433,6 +454,7 @@ export default function Home() {
                   <span className="text-sm text-zinc-700 dark:text-zinc-300">{walletAddress}</span>
                   <button onClick={faucetToWallet} className="rounded-md bg-black px-3 py-2 text-sm text-white dark:bg-white dark:text-black">Faucet (default)</button>
                   <button onClick={() => faucetStakeToWallet("100000")} className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/15">Faucet stake 100000</button>
+                  <span className="ml-2 rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Points {pointsWallet}</span>
                 </>
               )}
             </div>
@@ -498,6 +520,7 @@ export default function Home() {
             <button onClick={() => setActive("alice")} className={`rounded-md px-3 py-2 text-sm ${active === "alice" ? "bg-black text-white dark:bg-white dark:text-black" : "border border-black/10 dark:border-white/15"}`}>Use Alice</button>
             <button onClick={() => setActive("bob")} className={`rounded-md px-3 py-2 text-sm ${active === "bob" ? "bg-black text-white dark:bg-white dark:text-black" : "border border-black/10 dark:border-white/15"}`}>Use Bob</button>
             <span className="ml-2 text-sm text-zinc-600 dark:text-zinc-400">Active: {active} {activeAddress ? `(${activeAddress.slice(0, 10)}…${activeAddress.slice(-6)})` : "(no address)"}</span>
+            {activeAddress && <span className="ml-2 rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Points {pointsActive}</span>}
           </div>
         </section>
 
@@ -571,6 +594,10 @@ export default function Home() {
                     const result = await client.signAndBroadcast(address, [msg], "auto");
                     if (result.code !== 0) throw new Error(result.rawLog || `tx failed: ${result.code}`);
                     setTxMsg(`Listed! txhash ${result.transactionHash}`);
+                    try {
+                      const rp = buildMsgRecordActivity({ signer: address, address, action: "list_item", weight: 10, timestamp: 0 });
+                      await client.signAndBroadcast(address, [rp], "auto");
+                    } catch {}
                     setTimeout(refresh, 1500);
                   } catch (e: any) { setError(e?.message || "sell failed"); }
                   finally { setTxPending(false); }
@@ -662,6 +689,10 @@ export default function Home() {
                             const result = await client.signAndBroadcast(address, [msg], "auto");
                             if (result.code !== 0) throw new Error(result.rawLog || `tx failed: ${result.code}`);
                             setTxMsg(`Bought! txhash ${result.transactionHash}`);
+                            try {
+                              const rp = buildMsgRecordActivity({ signer: address, address, action: "buy_item", weight: 20, timestamp: 0 });
+                              await client.signAndBroadcast(address, [rp], "auto");
+                            } catch {}
                             setTimeout(refresh, 1500);
                           } catch (e: any) { setError(e?.message || "buy failed"); }
                           finally { setTxPending(false); }

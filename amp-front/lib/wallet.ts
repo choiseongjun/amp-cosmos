@@ -7,6 +7,7 @@ import { SigningStargateClient, GasPrice } from "@cosmjs/stargate";
 
 export const AMP_TYPEURL_LIST = "/amp.amp.v1.MsgListItem";
 export const AMP_TYPEURL_BUY = "/amp.amp.v1.MsgBuyItem";
+export const AMP_TYPEURL_POINTS_RECORD = "/amp.points.v1.MsgRecordActivity";
 
 type Coin = { denom: string; amount: string };
 
@@ -82,6 +83,23 @@ export function encodeMsgBuyItem(value: { buyer: string; listing_id: number }): 
   return concat(...parts);
 }
 
+export function encodeMsgRecordActivity(value: {
+  signer: string;
+  address: string;
+  action: string;
+  weight: number | string | bigint;
+  timestamp?: number | string | bigint;
+}): Uint8Array {
+  const parts: Uint8Array[] = [];
+  parts.push(fldString(1, value.signer));
+  parts.push(fldString(2, value.address));
+  parts.push(fldString(3, value.action));
+  parts.push(concat(tag(4, 0), encodeVarint(BigInt(value.weight))));
+  const ts = value.timestamp ?? 0;
+  parts.push(concat(tag(5, 0), encodeVarint(BigInt(ts))));
+  return concat(...parts);
+}
+
 // CosmJS registry with minimal GeneratedType-like interface
 const listType = {
   encode: (v: any) => ({ finish: () => encodeMsgListItem(v) }),
@@ -99,6 +117,12 @@ export function getRegistry(): Registry {
   const reg = new Registry();
   reg.register(AMP_TYPEURL_LIST, listType);
   reg.register(AMP_TYPEURL_BUY, buyType);
+  const pointsType = {
+    encode: (v: any) => ({ finish: () => encodeMsgRecordActivity(v) }),
+    decode: (_: Uint8Array) => ({}),
+    fromPartial: (v: any) => v,
+  } as any;
+  reg.register(AMP_TYPEURL_POINTS_RECORD, pointsType);
   return reg;
 }
 
@@ -193,3 +217,12 @@ export function buildMsgBuyItem(params: { buyer: string; listing_id: number }): 
   };
 }
 
+export function buildMsgRecordActivity(params: {
+  signer: string;
+  address: string;
+  action: string;
+  weight: number | string | bigint;
+  timestamp?: number | string | bigint;
+}): EncodeObject {
+  return { typeUrl: AMP_TYPEURL_POINTS_RECORD, value: params };
+}
