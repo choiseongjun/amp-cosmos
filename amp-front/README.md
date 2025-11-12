@@ -73,3 +73,9 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 Notes:
 - Default bech32 prefix is `cosmos`, coin type 118, fee token `stake`.
 - Gas price defaults to `0.025stake`.
+
+## Live Blocks
+
+- The UI subscribes to Tendermint WS at `<RPC>/websocket` for `NewBlock` events.
+- If WS is disabled or unavailable, it falls back to polling REST `.../blocks/latest` every 2s.
+- Toggle in UI: Endpoints → "Use WebSocket for live blocks".

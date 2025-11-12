@@ -6,6 +6,7 @@ import { getBalances, getNodeInfo, type Coin } from "@/lib/cosmos";
 import { getListings, statusToLabel, type Listing } from "@/lib/amp";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { buildMsgBuyItem, buildMsgListItem, getSigningClient, type ChainConfig } from "@/lib/wallet";
+import { subscribeNewBlocks, type BlockHeader } from "@/lib/tmws";
 
 type Actor = "alice" | "bob";
 
@@ -31,6 +32,9 @@ export default function Home() {
   const [txMsg, setTxMsg] = useState<string | null>(null);
   const [walletAddress, setWalletAddress] = useState<string>("");
   const [ownedLookupAddr, setOwnedLookupAddr] = useState<string>("");
+  const [wsEnabled, setWsEnabled] = useState(true);
+  const [wsError, setWsError] = useState<string | null>(null);
+  const [blocks, setBlocks] = useState<BlockHeader[]>([]);
 
   // sell form state
   const [sellTitle, setSellTitle] = useState("");
@@ -74,6 +78,50 @@ export default function Home() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeAddress]);
+
+  useEffect(() => {
+    let stop: (() => void) | null = null;
+    let poll: any = null;
+    setWsError(null);
+    if (wsEnabled && rpcUrl) {
+      try {
+        stop = subscribeNewBlocks(rpcUrl, (h) => {
+          setBlocks((prev) => {
+            const next = [h, ...prev.filter((x) => x.height !== h.height)];
+            return next.slice(0, 12);
+          });
+        });
+      } catch (e: any) {
+        setWsError(e?.message || "ws connect failed");
+      }
+    }
+    if (!wsEnabled && restUrl) {
+      // Fallback: poll latest block every 2s
+      poll = setInterval(async () => {
+        try {
+          const res = await fetch(`${restUrl.replace(/\/$/, "")}/cosmos/base/tendermint/v1beta1/blocks/latest`, { cache: "no-store" });
+          if (res.ok) {
+            const j = await res.json();
+            const header = j?.block?.header;
+            const txs = Array.isArray(j?.block?.data?.txs) ? j.block.data.txs.length : undefined;
+            if (header?.height) {
+              const h = { height: String(header.height), time: header.time, txs } as BlockHeader;
+              setBlocks((prev) => {
+                const next = [h, ...prev.filter((x) => x.height !== h.height)];
+                return next.slice(0, 12);
+              });
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }, 2000);
+    }
+    return () => {
+      if (stop) stop();
+      if (poll) clearInterval(poll);
+    };
+  }, [rpcUrl, restUrl, wsEnabled]);
 
   const requestFaucet = async () => {
     setError(null);
@@ -166,6 +214,13 @@ export default function Home() {
               <input value={creditPath} onChange={(e) => setCreditPath(e.target.value)} className="rounded-md border border-black/10 bg-white p-2 dark:border-white/15 dark:bg-zinc-900" placeholder="/credit" />
             </label>
           </div>
+          <div className="mt-3 flex items-center gap-3 text-sm">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={wsEnabled} onChange={(e) => setWsEnabled(e.target.checked)} />
+              <span className="text-zinc-600 dark:text-zinc-400">Use WebSocket for live blocks</span>
+            </label>
+            {wsError && <span className="text-red-600 dark:text-red-400">WS error: {wsError}</span>}
+          </div>
         </section>
 
         <section className="mb-6">
@@ -209,6 +264,25 @@ export default function Home() {
                 );
               })()}
             </div>
+          </div>
+        </section>
+
+        <section className="mb-6">
+          <h2 className="mb-2 text-lg font-medium text-black dark:text-zinc-50">Live Blocks</h2>
+          <div className="rounded-md border border-black/10 p-4 dark:border-white/15">
+            {blocks.length === 0 ? (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">Waiting for block events…</p>
+            ) : (
+              <ul className="text-sm text-black dark:text-zinc-50">
+                {blocks.map((b) => (
+                  <li key={b.height} className="flex items-center justify-between py-1">
+                    <span>Height {b.height}</span>
+                    <span className="text-zinc-500">{b.time?.replace("T", " ").replace("Z", " Z") || ""}</span>
+                    {typeof b.txs === "number" && <span className="text-zinc-500">txs {b.txs}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
 
