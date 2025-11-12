@@ -1,0 +1,85 @@
+syntax = "proto3";
+package amp.amp.v1;
+
+import "amino/amino.proto";
+import "amp/amp/v1/params.proto";
+import "cosmos/msg/v1/msg.proto";
+import "cosmos_proto/cosmos.proto";
+import "gogoproto/gogo.proto";
+import "cosmos/base/v1beta1/coin.proto";
+
+option go_package = "amp/x/amp/types";
+
+// Msg defines the Msg service.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // UpdateParams defines a (governance) operation for updating the module
+  // parameters. The authority defaults to the x/gov module account.
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+
+  // ListItem creates a new item listing.
+  rpc ListItem(MsgListItem) returns (MsgListItemResponse);
+
+  // BuyItem buys an active item.
+  rpc BuyItem(MsgBuyItem) returns (MsgBuyItemResponse);
+
+  // DelistItem cancels an active item by the seller.
+  rpc DelistItem(MsgDelistItem) returns (MsgDelistItemResponse);
+}
+
+// MsgUpdateParams is the Msg/UpdateParams request type.
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  option (amino.name) = "amp/x/amp/MsgUpdateParams";
+
+  // authority is the address that controls the module (defaults to x/gov unless overwritten).
+  string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+
+  // params defines the module parameters to update.
+  //
+  // NOTE: All parameters must be supplied.
+  Params params = 2 [
+    (gogoproto.nullable) = false,
+    (amino.dont_omitempty) = true
+  ];
+}
+
+// MsgUpdateParamsResponse defines the response structure for executing a
+// MsgUpdateParams message.
+message MsgUpdateParamsResponse {}
+
+// MsgListItem defines a request to list an item for sale.
+message MsgListItem {
+  option (cosmos.msg.v1.signer) = "seller";
+
+  string seller = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string title = 2;
+  string description = 3;
+  cosmos.base.v1beta1.Coin asset = 4 [(gogoproto.nullable) = false];
+  cosmos.base.v1beta1.Coin price = 5 [(gogoproto.nullable) = false];
+}
+
+message MsgListItemResponse {
+  uint64 id = 1;
+}
+
+// MsgBuyItem defines a request to buy an item.
+message MsgBuyItem {
+  option (cosmos.msg.v1.signer) = "buyer";
+
+  string buyer = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  uint64 listing_id = 2;
+}
+
+message MsgBuyItemResponse {}
+
+// MsgDelistItem defines a request to cancel an item.
+message MsgDelistItem {
+  option (cosmos.msg.v1.signer) = "seller";
+
+  string seller = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  uint64 listing_id = 2;
+}
+
+message MsgDelistItemResponse {}

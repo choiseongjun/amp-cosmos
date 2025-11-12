@@ -1,0 +1,15 @@
+syntax = "proto3";
+package amp.amp.v1;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "amp/x/amp/types";
+
+// Params defines the parameters for the module.
+message Params {
+  option (amino.name) = "amp/x/amp/Params";
+  option (gogoproto.equal) = true;
+  // commission_rate is a decimal in [0,1] applied on price
+  string commission_rate = 1 [(gogoproto.customtype) = "cosmossdk.io/math.LegacyDec", (gogoproto.nullable) = false];
+}
