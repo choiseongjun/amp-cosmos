@@ -350,12 +350,27 @@ export default function Home() {
                 onClick={async () => {
                   try {
                     setLoadingHist(true);
+                    setHistBlocks([]);
                     const latest = blocks[0]?.height ? Number(blocks[0].height) : await getLatestHeight(rpcUrl);
-                    const n = Math.max(1, Math.min(1000, histCount || 200));
-                    const minH = Math.max(1, latest - n + 1);
-                    const metas = await getBlockMetas(rpcUrl, minH, latest);
-                    const withTxs = metas.filter((m) => (m.num_txs ?? 0) > 0);
-                    const mapped = withTxs.map((m) => ({ height: String(m.height), time: m.time, txs: m.num_txs } as BlockHeader));
+                    const n = Math.max(1, Math.min(10000, histCount || 200));
+                    let cursor = latest;
+                    let remaining = n;
+                    const window = 200; // scan in windows to avoid RPC caps
+                    const metasAll: { height: number; time?: string; num_txs?: number }[] = [];
+                    while (cursor >= 1 && remaining > 0) {
+                      const span = Math.min(window, remaining);
+                      const minH = Math.max(1, cursor - span + 1);
+                      const metas = await getBlockMetas(rpcUrl, minH, cursor);
+                      metasAll.push(...metas);
+                      cursor = minH - 1;
+                      remaining -= span;
+                      // simple yield to UI
+                      await new Promise((r) => setTimeout(r, 10));
+                    }
+                    const withTxs = metasAll.filter((m) => (m.num_txs ?? 0) > 0);
+                    const uniq = new Map<number, { height: number; time?: string; num_txs?: number }>();
+                    for (const m of withTxs) if (!uniq.has(m.height)) uniq.set(m.height, m);
+                    const mapped = Array.from(uniq.values()).map((m) => ({ height: String(m.height), time: m.time, txs: m.num_txs } as BlockHeader));
                     setHistBlocks(mapped.sort((a, b) => Number(b.height) - Number(a.height)));
                   } catch (e: any) {
                     setError(e?.message || "history fetch failed");
