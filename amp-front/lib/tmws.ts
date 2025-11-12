@@ -55,3 +55,26 @@ export function subscribeNewBlocks(rpcUrl: string, onHeader: (h: BlockHeader) =>
   };
 }
 
+export async function getLatestHeight(rpcUrl: string): Promise<number> {
+  const url = rpcUrl.replace(/\/$/, "") + "/status";
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`status error: ${res.status}`);
+  const j = await res.json();
+  const h = j?.result?.sync_info?.latest_block_height;
+  return Number(h || 0);
+}
+
+export type BlockMeta = { height: number; time?: string; num_txs?: number };
+
+export async function getBlockMetas(rpcUrl: string, minHeight: number, maxHeight: number): Promise<BlockMeta[]> {
+  const url = rpcUrl.replace(/\/$/, "") + `/blockchain?minHeight=${minHeight}&maxHeight=${maxHeight}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`blockchain error: ${res.status}`);
+  const j = await res.json();
+  const metas = j?.result?.block_metas || [];
+  return metas.map((m: any) => ({
+    height: Number(m?.header?.height),
+    time: m?.header?.time,
+    num_txs: Number(m?.num_txs ?? 0),
+  }));
+}

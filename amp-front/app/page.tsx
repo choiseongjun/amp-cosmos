@@ -6,7 +6,7 @@ import { getBalances, getNodeInfo, type Coin } from "@/lib/cosmos";
 import { getListings, statusToLabel, type Listing } from "@/lib/amp";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { buildMsgBuyItem, buildMsgListItem, getSigningClient, type ChainConfig } from "@/lib/wallet";
-import { subscribeNewBlocks, type BlockHeader } from "@/lib/tmws";
+import { getBlockMetas, getLatestHeight, subscribeNewBlocks, type BlockHeader } from "@/lib/tmws";
 import { getBlockTxEvents, type TxEvent } from "@/lib/tx";
 
 type Actor = "alice" | "bob";
@@ -39,6 +39,9 @@ export default function Home() {
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
   const [blockEvents, setBlockEvents] = useState<TxEvent[] | null>(null);
   const [loadingBlock, setLoadingBlock] = useState(false);
+  const [histCount, setHistCount] = useState(200);
+  const [histBlocks, setHistBlocks] = useState<BlockHeader[]>([]);
+  const [loadingHist, setLoadingHist] = useState(false);
 
   // sell form state
   const [sellTitle, setSellTitle] = useState("");
@@ -331,6 +334,51 @@ export default function Home() {
                       <span className="text-zinc-500">txs {b.txs}</span>
                     </li>
                   ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="mb-6">
+          <h2 className="mb-2 text-lg font-medium text-black dark:text-zinc-50">History: Blocks With Txs (last N)</h2>
+          <div className="rounded-md border border-black/10 p-4 dark:border-white/15">
+            <div className="mb-3 flex items-center gap-2 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">N</span>
+              <input type="number" min={1} max={1000} value={histCount} onChange={(e) => setHistCount(parseInt(e.target.value || "0", 10) || 0)} className="w-24 rounded-md border border-black/10 bg-white p-2 dark:border-white/15 dark:bg-zinc-900" />
+              <button
+                className="rounded-md border border-black/10 px-3 py-2 dark:border-white/15"
+                onClick={async () => {
+                  try {
+                    setLoadingHist(true);
+                    const latest = blocks[0]?.height ? Number(blocks[0].height) : await getLatestHeight(rpcUrl);
+                    const n = Math.max(1, Math.min(1000, histCount || 200));
+                    const minH = Math.max(1, latest - n + 1);
+                    const metas = await getBlockMetas(rpcUrl, minH, latest);
+                    const withTxs = metas.filter((m) => (m.num_txs ?? 0) > 0);
+                    const mapped = withTxs.map((m) => ({ height: String(m.height), time: m.time, txs: m.num_txs } as BlockHeader));
+                    setHistBlocks(mapped.sort((a, b) => Number(b.height) - Number(a.height)));
+                  } catch (e: any) {
+                    setError(e?.message || "history fetch failed");
+                  } finally {
+                    setLoadingHist(false);
+                  }
+                }}
+              >Load</button>
+              {loadingHist && <span className="text-zinc-500">Loading…</span>}
+            </div>
+            {histBlocks.length === 0 ? (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">No blocks with txs in the selected range.</p>
+            ) : (
+              <ul className="text-sm text-black dark:text-zinc-50">
+                {histBlocks.map((b) => (
+                  <li key={b.height} className="flex items-center justify-between py-1">
+                    <button className={`text-left ${selectedBlock === b.height ? "font-semibold" : ""}`} onClick={() => setSelectedBlock(b.height)}>
+                      Height {b.height}
+                    </button>
+                    <span className="text-zinc-500">{b.time?.replace("T", " ").replace("Z", " Z") || ""}</span>
+                    {typeof b.txs === "number" && <span className="text-zinc-500">txs {b.txs}</span>}
+                  </li>
+                ))}
               </ul>
             )}
           </div>
