@@ -7,6 +7,7 @@ import { getListings, statusToLabel, type Listing } from "@/lib/amp";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { buildMsgBuyItem, buildMsgListItem, getSigningClient, type ChainConfig } from "@/lib/wallet";
 import { subscribeNewBlocks, type BlockHeader } from "@/lib/tmws";
+import { getBlockTxEvents, type TxEvent } from "@/lib/tx";
 
 type Actor = "alice" | "bob";
 
@@ -35,6 +36,9 @@ export default function Home() {
   const [wsEnabled, setWsEnabled] = useState(true);
   const [wsError, setWsError] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<BlockHeader[]>([]);
+  const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
+  const [blockEvents, setBlockEvents] = useState<TxEvent[] | null>(null);
+  const [loadingBlock, setLoadingBlock] = useState(false);
 
   // sell form state
   const [sellTitle, setSellTitle] = useState("");
@@ -122,6 +126,27 @@ export default function Home() {
       if (poll) clearInterval(poll);
     };
   }, [rpcUrl, restUrl, wsEnabled]);
+
+  useEffect(() => {
+    const h = blocks[0]?.height; // if new block arrives and nothing selected, show latest
+    if (!selectedBlock && h) setSelectedBlock(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocks]);
+
+  useEffect(() => {
+    (async () => {
+      if (!selectedBlock) return;
+      try {
+        setLoadingBlock(true);
+        const activity = await getBlockTxEvents(restUrl, selectedBlock);
+        setBlockEvents(activity.events);
+      } catch (e: any) {
+        setBlockEvents([{ type: "error", attributes: [{ key: "message", value: e?.message || "failed" }] }]);
+      } finally {
+        setLoadingBlock(false);
+      }
+    })();
+  }, [selectedBlock, restUrl]);
 
   const requestFaucet = async () => {
     setError(null);
@@ -276,12 +301,38 @@ export default function Home() {
               <ul className="text-sm text-black dark:text-zinc-50">
                 {blocks.map((b) => (
                   <li key={b.height} className="flex items-center justify-between py-1">
-                    <span>Height {b.height}</span>
+                    <button className={`text-left ${selectedBlock === b.height ? "font-semibold" : ""}`} onClick={() => setSelectedBlock(b.height)}>
+                      Height {b.height}
+                    </button>
                     <span className="text-zinc-500">{b.time?.replace("T", " ").replace("Z", " Z") || ""}</span>
                     {typeof b.txs === "number" && <span className="text-zinc-500">txs {b.txs}</span>}
                   </li>
                 ))}
               </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="mb-6">
+          <h2 className="mb-2 text-lg font-medium text-black dark:text-zinc-50">Block Activity {selectedBlock ? `(#${selectedBlock})` : ""}</h2>
+          <div className="rounded-md border border-black/10 p-4 dark:border-white/15">
+            <div className="mb-2 flex items-center gap-2 text-sm">
+              <input value={selectedBlock ?? ""} onChange={(e) => setSelectedBlock(e.target.value)} className="w-40 rounded-md border border-black/10 bg-white p-2 dark:border-white/15 dark:bg-zinc-900" placeholder="height" />
+              {loadingBlock && <span className="text-zinc-500">Loading…</span>}
+            </div>
+            {blockEvents && blockEvents.length > 0 ? (
+              <ul className="text-sm text-black dark:text-zinc-50">
+                {blockEvents.map((ev, idx) => (
+                  <li key={idx} className="py-1">
+                    <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{ev.type}</span>
+                    {ev.attributes?.map((a, i) => (
+                      <span key={i} className="ml-2 text-xs text-zinc-500">{a.key}:{a.value}</span>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">No relevant events in this block.</p>
             )}
           </div>
         </section>
