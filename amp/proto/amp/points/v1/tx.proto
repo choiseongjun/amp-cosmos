@@ -1,0 +1,33 @@
+syntax = "proto3";
+package amp.points.v1;
+
+import "amino/amino.proto";
+import "cosmos/msg/v1/msg.proto";
+import "cosmos_proto/cosmos.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "amp/x/points/types";
+
+// Msg service for x/points
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // RecordActivity increases score for an address based on weight.
+  rpc RecordActivity(MsgRecordActivity) returns (MsgRecordActivityResponse);
+}
+
+// MsgRecordActivity increments the score for an address.
+message MsgRecordActivity {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  string signer = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string address = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"]; // subject to score
+  string action = 3;   // free-form label (e.g., "list_item", "buy_item")
+  int64  weight = 4;   // score delta (can be positive)
+  int64  timestamp = 5; // unix seconds (optional; if 0, use block time)
+}
+
+message MsgRecordActivityResponse {
+  int64 new_score = 1;
+}
+

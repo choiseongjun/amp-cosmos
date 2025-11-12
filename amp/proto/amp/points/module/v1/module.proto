@@ -1,0 +1,11 @@
+syntax = "proto3";
+package amp.points.module.v1;
+
+option go_package = "amp/x/points/types";
+
+// Module config for depinject wiring.
+message Module {
+  // Optional custom authority (module name or address). Defaults to gov module account.
+  string authority = 1;
+}
+

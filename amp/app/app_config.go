@@ -1,8 +1,10 @@
 package app
 
 import (
-	_ "amp/x/amp/module"
-	ampmoduletypes "amp/x/amp/types"
+    _ "amp/x/amp/module"
+    ampmoduletypes "amp/x/amp/types"
+    _ "amp/x/points/module"
+    pointsmoduletypes "amp/x/points/types"
 	"time"
 
 	runtimev1alpha1 "cosmossdk.io/api/cosmos/app/runtime/v1alpha1"
@@ -125,8 +127,9 @@ var (
 						epochstypes.ModuleName,
 						// ibc modules
 						ibcexported.ModuleName,
-						// chain modules
-						ampmoduletypes.ModuleName,
+                    // chain modules
+                    ampmoduletypes.ModuleName,
+                    pointsmoduletypes.ModuleName,
 						// this line is used by starport scaffolding # stargate/app/beginBlockers
 					},
 					EndBlockers: []string{
@@ -269,10 +272,14 @@ var (
 				Name:   epochstypes.ModuleName,
 				Config: appconfig.WrapAny(&epochsmodulev1.Module{}),
 			},
-			{
-				Name:   ampmoduletypes.ModuleName,
-				Config: appconfig.WrapAny(&ampmoduletypes.Module{}),
-			},
+            {
+                Name:   ampmoduletypes.ModuleName,
+                Config: appconfig.WrapAny(&ampmoduletypes.Module{}),
+            },
+            {
+                Name:   pointsmoduletypes.ModuleName,
+                Config: appconfig.WrapAny(&pointsmoduletypes.Module{}),
+            },
 			// this line is used by starport scaffolding # stargate/app/moduleConfig
 		},
 	})

@@ -1,0 +1,20 @@
+syntax = "proto3";
+package amp.points.v1;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+
+option go_package = "amp/x/points/types";
+
+// Query defines the gRPC querier service.
+service Query {
+  rpc Score(QueryScoreRequest) returns (QueryScoreResponse) {
+    option (google.api.http).get = "/amp/points/v1/score/{address}";
+  }
+}
+
+message QueryScoreRequest { string address = 1; }
+
+message QueryScoreResponse { int64 score = 1; }
+
