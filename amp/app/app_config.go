@@ -137,9 +137,10 @@ var (
 						stakingtypes.ModuleName,
 						feegrant.ModuleName,
 						group.ModuleName,
-						// chain modules
-						ampmoduletypes.ModuleName,
-						// this line is used by starport scaffolding # stargate/app/endBlockers
+                    // chain modules
+                    ampmoduletypes.ModuleName,
+                    pointsmoduletypes.ModuleName,
+                    // this line is used by starport scaffolding # stargate/app/endBlockers
 					},
 					// The following is mostly only needed when ModuleName != StoreKey name.
 					OverrideStoreKeys: []*runtimev1alpha1.StoreKeyConfig{
@@ -174,9 +175,10 @@ var (
 						ibcexported.ModuleName,
 						ibctransfertypes.ModuleName,
 						icatypes.ModuleName,
-						// chain modules
-						ampmoduletypes.ModuleName,
-						// this line is used by starport scaffolding # stargate/app/initGenesis
+                    // chain modules
+                    ampmoduletypes.ModuleName,
+                    pointsmoduletypes.ModuleName,
+                    // this line is used by starport scaffolding # stargate/app/initGenesis
 					},
 				}),
 			},
