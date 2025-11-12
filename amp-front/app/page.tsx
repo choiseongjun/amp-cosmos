@@ -314,7 +314,7 @@ export default function Home() {
         </section>
 
         <section className="mb-6">
-          <h2 className="mb-2 text-lg font-medium text-black dark:text-zinc-50">Blocks With Txs (txs > 0)</h2>
+          <h2 className="mb-2 text-lg font-medium text-black dark:text-zinc-50">Blocks With Txs (txs &gt; 0)</h2>
           <div className="rounded-md border border-black/10 p-4 dark:border-white/15">
             {blocks.filter((b) => typeof b.txs === "number" && (b.txs ?? 0) > 0).length === 0 ? (
               <p className="text-sm text-zinc-600 dark:text-zinc-400">No recent blocks with transactions.</p>
