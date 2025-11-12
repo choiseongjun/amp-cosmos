@@ -314,6 +314,29 @@ export default function Home() {
         </section>
 
         <section className="mb-6">
+          <h2 className="mb-2 text-lg font-medium text-black dark:text-zinc-50">Blocks With Txs (txs > 0)</h2>
+          <div className="rounded-md border border-black/10 p-4 dark:border-white/15">
+            {blocks.filter((b) => typeof b.txs === "number" && (b.txs ?? 0) > 0).length === 0 ? (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">No recent blocks with transactions.</p>
+            ) : (
+              <ul className="text-sm text-black dark:text-zinc-50">
+                {blocks
+                  .filter((b) => typeof b.txs === "number" && (b.txs ?? 0) > 0)
+                  .map((b) => (
+                    <li key={b.height} className="flex items-center justify-between py-1">
+                      <button className={`text-left ${selectedBlock === b.height ? "font-semibold" : ""}`} onClick={() => setSelectedBlock(b.height)}>
+                        Height {b.height}
+                      </button>
+                      <span className="text-zinc-500">{b.time?.replace("T", " ").replace("Z", " Z") || ""}</span>
+                      <span className="text-zinc-500">txs {b.txs}</span>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="mb-6">
           <h2 className="mb-2 text-lg font-medium text-black dark:text-zinc-50">Block Activity {selectedBlock ? `(#${selectedBlock})` : ""}</h2>
           <div className="rounded-md border border-black/10 p-4 dark:border-white/15">
             <div className="mb-2 flex items-center gap-2 text-sm">
